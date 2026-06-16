@@ -64,3 +64,29 @@ def get_product(product_id: int,db: Session = Depends(get_db)):
         )
     
     return product
+
+@app.delete("/products/{product_id}")
+def delete_product(product_id:int,db: Session= Depends(get_db)):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(
+            status_code= 404,
+            detail= "Product not found"
+        )
+    db.delete(product)
+    db.commit()
+    return {"message": "Product Deleted"}
+
+@app.put("/product/{product_id}",response_model= ProductResponse)
+def update_product(product_id: int,updated_product: ProductCreate, db : Session = Depends(get_db)):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(
+            status_code= 404,
+            detail= "Product not found"
+        )
+    product.name = updated_product.name
+    product.price = updated_product.price
+    db.commit()
+    db.refres(product)
+    return product
