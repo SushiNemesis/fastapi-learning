@@ -1,9 +1,10 @@
 from fastapi import FastAPI,Depends, HTTPException
-from auth import get_password_hash,verify_password,create_access_token,pwd_content
+from auth import get_password_hash,verify_password,create_access_token,pwd_context,get_current_user
 from model import User
 from schemas import UserCreate, UserResponse, UserLogin
 from database import engine,Base,get_db
 from sqlalchemy.orm import Session
+from fastapi.security import OAuth2PasswordRequestForm
 
 app = FastAPI()
 
@@ -29,14 +30,14 @@ def signup(user : UserCreate,db: Session = Depends(get_db)):
     return new_user
 
 @app.post("/login")
-def login(user: UserLogin, db: Session = Depends(get_db)):
-    existing_user = db.query(User).filter(User.username == user.username).first()
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    existing_user = db.query(User).filter(User.username == form_data.username).first()
     if not existing_user:
         raise HTTPException(
             status_code= 404,
             detail= "User Not Found"
         )
-    if not verify_password(user.password,existing_user.hashed_password):
+    if not verify_password(form_data.password,existing_user.hashed_password):
         raise HTTPException(
             status_code= 401,
             detail="Invalid Password"
@@ -51,3 +52,7 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         "access_token":access_token,
         "token_type" : "bearer"
     }
+
+@app.get("/me")
+def get_me(current_user = Depends(get_current_user)):
+    return current_user
